@@ -5,6 +5,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
 import java.security.Key;
 import java.util.Date;
 import java.util.UUID;
@@ -14,6 +15,7 @@ public class JwtUtil {
 
     private final String secret;
     private final long expirationMs;
+    private Key key;
 
     public JwtUtil(
         @Value("${app.jwt.secret}") String secret,
@@ -23,8 +25,19 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
+    @PostConstruct
+    public void init() {
+        if (secret == null || secret.length() < 32) {
+            throw new IllegalArgumentException(
+                "JWT secret is missing or too short. Must be at least 32 characters."
+            );
+        }
+        key = Keys.hmacShaKeyFor(secret.getBytes());
+        System.out.println("JwtUtil initialized successfully with secret length: " + secret.length());
+    }
+
     private Key getKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        return key;
     }
 
     public String generateToken(UUID userId, Role role, String email, String fullName) {
